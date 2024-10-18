@@ -1,3 +1,23 @@
+## Quick Start:
+
+Prepare dataset:
+```bash
+cd dataset
+python prepare_dataset.py
+```
+
+Train EfficientAD on custom dataset:
+```bash
+python efficientad.py --dataset custom --custom_dataset_path dataset\leddd -t 1000
+```
+
+Train EfficientAD on MVTec AD dataset:
+```bash
+python efficientad.py --dataset mvtec_ad -t 1000
+```
+
+---
+
 # EfficientAD
 Unofficial implementation of paper https://arxiv.org/abs/2303.14535
 
