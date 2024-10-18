@@ -54,6 +54,7 @@ Final image auc: 95.1452
 - [ ] Read the paper
 - [ ] Understand the metrics
 - [ ] Familiarize with the code
+- [ ] Integrate this repo with [agbld/led-defects-detection](https://github.com/agbld/led-defects-detection.git)
 
 ---
 
