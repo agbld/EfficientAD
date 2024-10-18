@@ -3,6 +3,7 @@
 import numpy as np
 import tifffile
 import torch
+torch.set_float32_matmul_precision('medium')
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import argparse
