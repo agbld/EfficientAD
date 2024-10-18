@@ -1,6 +1,9 @@
-# Python==3.10
-torch==1.13.0
-torchvision==0.14.0
+# conda create -n effad python=3.10
+# conda activate effad
+# pip install torch==1.13.0+cu116 torchvision==0.14.0+cu116 torchaudio==0.13.0+cu116 -f https://download.pytorch.org/whl/cu116/torch_stable.html
+
+# torch==1.13.0
+# torchvision==0.14.0
 tifffile==2021.7.30
 tqdm==4.56.0
 scikit-learn==1.2.2
@@ -10,3 +13,4 @@ scipy==1.7.1
 tabulate==0.8.7
 tifffile==2021.7.30
 tqdm==4.56.0
+pandas

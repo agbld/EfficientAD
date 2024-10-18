@@ -18,18 +18,18 @@ from sklearn.metrics import roc_auc_score
 def get_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', default='mvtec_ad',
-                        choices=['mvtec_ad', 'mvtec_loco'])
+                        choices=['mvtec_ad', 'mvtec_loco', 'custom'])
     parser.add_argument('-s', '--subdataset', default='bottle',
-                        help='One of 15 sub-datasets of Mvtec AD or 5' +
-                             'sub-datasets of Mvtec LOCO')
+                        help='One of 15 sub-datasets of Mvtec AD or 5 '
+                             'sub-datasets of Mvtec LOCO. Ignored if dataset is custom.')
     parser.add_argument('-o', '--output_dir', default='output/1')
     parser.add_argument('-m', '--model_size', default='small',
                         choices=['small', 'medium'])
     parser.add_argument('-w', '--weights', default='models/teacher_small.pth')
     parser.add_argument('-i', '--imagenet_train_path',
                         default='none',
-                        help='Set to "none" to disable ImageNet' +
-                             'pretraining penalty. Or see README.md to' +
+                        help='Set to "none" to disable ImageNet '
+                             'pretraining penalty. Or see README.md to '
                              'download ImageNet and set to ImageNet path')
     parser.add_argument('-a', '--mvtec_ad_path',
                         default='./mvtec_anomaly_detection',
@@ -37,6 +37,9 @@ def get_argparse():
     parser.add_argument('-b', '--mvtec_loco_path',
                         default='./mvtec_loco_anomaly_detection',
                         help='Downloaded Mvtec LOCO dataset')
+    parser.add_argument('-c', '--custom_dataset_path',
+                        default='./custom_dataset',
+                        help='Path to your custom dataset')
     parser.add_argument('-t', '--train_steps', type=int, default=70000)
     return parser.parse_args()
 
@@ -72,6 +75,8 @@ def main():
         dataset_path = config.mvtec_ad_path
     elif config.dataset == 'mvtec_loco':
         dataset_path = config.mvtec_loco_path
+    elif config.dataset == 'custom':
+        dataset_path = config.custom_dataset_path
     else:
         raise Exception('Unknown config.dataset')
 
@@ -80,36 +85,71 @@ def main():
         pretrain_penalty = False
 
     # create output dir
-    train_output_dir = os.path.join(config.output_dir, 'trainings',
-                                    config.dataset, config.subdataset)
-    test_output_dir = os.path.join(config.output_dir, 'anomaly_maps',
-                                   config.dataset, config.subdataset, 'test')
+    if config.dataset == 'custom':
+        train_output_dir = os.path.join(config.output_dir, 'trainings', 'custom')
+        test_output_dir = os.path.join(config.output_dir, 'anomaly_maps', 'custom', 'test')
+    else:
+        train_output_dir = os.path.join(config.output_dir, 'trainings',
+                                        config.dataset, config.subdataset)
+        test_output_dir = os.path.join(config.output_dir, 'anomaly_maps',
+                                       config.dataset, config.subdataset, 'test')
+
+    # if dirs already exist, remove them
+    if os.path.exists(train_output_dir):
+        import shutil
+        shutil.rmtree(train_output_dir)
+    if os.path.exists(test_output_dir):
+        import shutil
+        shutil.rmtree(test_output_dir)
     os.makedirs(train_output_dir)
     os.makedirs(test_output_dir)
 
     # load data
-    full_train_set = ImageFolderWithoutTarget(
-        os.path.join(dataset_path, config.subdataset, 'train'),
-        transform=transforms.Lambda(train_transform))
-    test_set = ImageFolderWithPath(
-        os.path.join(dataset_path, config.subdataset, 'test'))
-    if config.dataset == 'mvtec_ad':
-        # mvtec dataset paper recommend 10% validation set
+    if config.dataset == 'mvtec_ad' or config.dataset == 'mvtec_loco':
+        if config.dataset == 'mvtec_ad':
+            # mvtec dataset paper recommend 10% validation set
+            full_train_set = ImageFolderWithoutTarget(
+                os.path.join(dataset_path, config.subdataset, 'train'),
+                transform=transforms.Lambda(train_transform))
+            test_set = ImageFolderWithPath(
+                os.path.join(dataset_path, config.subdataset, 'test'))
+            train_size = int(0.9 * len(full_train_set))
+            validation_size = len(full_train_set) - train_size
+            rng = torch.Generator().manual_seed(seed)
+            train_set, validation_set = torch.utils.data.random_split(full_train_set,
+                                                               [train_size,
+                                                                validation_size],
+                                                               generator=rng)
+        elif config.dataset == 'mvtec_loco':
+            full_train_set = ImageFolderWithoutTarget(
+                os.path.join(dataset_path, config.subdataset, 'train'),
+                transform=transforms.Lambda(train_transform))
+            train_set = full_train_set
+            validation_set = ImageFolderWithoutTarget(
+                os.path.join(dataset_path, config.subdataset, 'validation'),
+                transform=transforms.Lambda(train_transform))
+            test_set = ImageFolderWithPath(
+                os.path.join(dataset_path, config.subdataset, 'test'))
+        else:
+            raise Exception('Unknown config.dataset')
+    elif config.dataset == 'custom':
+        # Load training data (normal images only)
+        full_train_set = ImageFolderWithoutTarget(
+            os.path.join(dataset_path, 'train'),
+            transform=transforms.Lambda(train_transform))
+
+        # Split training data into train and validation sets
         train_size = int(0.9 * len(full_train_set))
         validation_size = len(full_train_set) - train_size
         rng = torch.Generator().manual_seed(seed)
-        train_set, validation_set = torch.utils.data.random_split(full_train_set,
-                                                           [train_size,
-                                                            validation_size],
-                                                           rng)
-    elif config.dataset == 'mvtec_loco':
-        train_set = full_train_set
-        validation_set = ImageFolderWithoutTarget(
-            os.path.join(dataset_path, config.subdataset, 'validation'),
-            transform=transforms.Lambda(train_transform))
+        train_set, validation_set = torch.utils.data.random_split(
+            full_train_set, [train_size, validation_size], generator=rng)
+
+        # Load test data (normal and abnormal images)
+        test_set = ImageFolderWithPath(
+            os.path.join(dataset_path, 'test'))
     else:
         raise Exception('Unknown config.dataset')
-
 
     train_loader = DataLoader(train_set, batch_size=1, shuffle=True,
                               num_workers=4, pin_memory=True)
@@ -260,6 +300,7 @@ def main():
         test_output_dir=test_output_dir, desc='Final inference')
     print('Final image auc: {:.4f}'.format(auc))
 
+@torch.no_grad()
 def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
          q_st_start, q_st_end, q_ae_start, q_ae_end, test_output_dir=None,
          desc='Running inference'):
