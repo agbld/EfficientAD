@@ -3,18 +3,57 @@
 Prepare dataset:
 ```bash
 cd dataset
-python prepare_dataset.py
+python prepare_dataset.py --annotations original/annotations/instance.json --labeled_dir original/images/ --unlabeled_dir original/normal/B/ --output_dir leddd --train_ratio 0.8
 ```
 
 Train EfficientAD on custom dataset:
 ```bash
-python efficientad.py --dataset custom --custom_dataset_path dataset\leddd -t 1000
+python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --train_steps 1000
 ```
 
-Train EfficientAD on MVTec AD dataset:
+## Expected Output:
+
 ```bash
-python efficientad.py --dataset mvtec_ad -t 1000
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ cd dataset/
+
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD/dataset$ python prepare_dataset.py --annotations original/annotations/instance.json --labeled_dir original/images/ --unlabeled_dir original/normal/B/ --output_dir leddd --train_ratio 0.8
+Namespace(annotations='original/annotations/instance.json', labeled_dir='original/images/', output_dir='leddd', train_ratio=0.8, unlabeled_dir='original/normal/B/')
+prepare_dataset.py:91: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  normal_defect_img_df['full_image_path'] = normal_defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
+prepare_dataset.py:150: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  defect_img_df['full_image_path'] = defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
+Number of images in leddd/train/good: 773
+Number of images in leddd/test/good: 194
+Number of images in leddd/test/defect_type_2: 112
+Number of images in leddd/test/defect_type_4: 134
+Number of images in leddd/test/defect_type_3: 87
+Number of images in leddd/test/defect_type_7: 10
+Number of images in leddd/test/defect_type_6: 6
+
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD/dataset$ cd ..
+
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --train_steps 1000
+Computing mean of features: 100%|████████████████████████████████████████████████████████████| 695/695 [00:01<00:00, 420.63it/s]
+Computing std of features: 100%|█████████████████████████████████████████████████████████████| 695/695 [00:01<00:00, 618.44it/s]
+Current loss: 5.1687  : 100%|███████████████████████████████████████████████████████████████| 1000/1000 [00:16<00:00, 60.22it/s]
+Final map normalization: 100%|█████████████████████████████████████████████████████████████████| 78/78 [00:00<00:00, 117.57it/s]
+Final inference: 100%|███████████████████████████████████████████████████████████████████████| 543/543 [00:03<00:00, 139.98it/s]
+Final image auc: 95.1452
 ```
+
+## TODO
+
+- [ ] Read the paper
+- [ ] Understand the metrics
+- [ ] Familiarize with the code
 
 ---
 
