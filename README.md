@@ -8,46 +8,103 @@ python prepare_dataset.py --annotations original/annotations/instance.json --lab
 
 Train EfficientAD on custom dataset:
 ```bash
-python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000
+python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000 --threshold 20 --batch_size 4
 ```
 
-## Expected Output:
+### Expected Output
+
+Following shows the metrics under different `threshold` values:
 
 ```bash
-(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ cd dataset/
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000 --threshold 20 --batch_size 4
+Computing mean of features: 100%|██████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 105.77it/s]
+Computing std of features: 100%|███████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 167.34it/s]
+Current loss: 4.9925  : 100%|█████████████████████████████████████████████████████████████████████| 1000/1000 [00:52<00:00, 18.92it/s]
+Final map normalization: 100%|████████████████████████████████████████████████████████████████████████| 22/22 [00:00<00:00, 48.38it/s]
+Final inference: 100%|█████████████████████████████████████████████████████████████████████████████| 561/561 [00:05<00:00, 107.96it/s]
 
-(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD/dataset$ python prepare_dataset.py --annotations original/annotations/instance.json --labeled_dir original/images/ --unlabeled_dir original/normal/B/ --output_dir leddd --train_ratio 0.8
-Namespace(annotations='original/annotations/instance.json', labeled_dir='original/images/', output_dir='leddd', train_ratio=0.8, unlabeled_dir='original/normal/B/')
-prepare_dataset.py:91: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
+Class            Accuracy    Precision    Recall    Num Samples
+-------------  ----------  -----------  --------  -------------
+defect_type_2      0.9107       1.0000    0.9107            112
+defect_type_3      0.9770       1.0000    0.9770             87
+defect_type_4      1.0000       1.0000    1.0000            134
+defect_type_6      1.0000       1.0000    1.0000              6
+defect_type_7      1.0000       1.0000    1.0000             10
+good               0.8538       0.0000  nan                 212
 
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  normal_defect_img_df['full_image_path'] = normal_defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
-prepare_dataset.py:150: SettingWithCopyWarning: 
-A value is trying to be set on a copy of a slice from a DataFrame.
-Try using .loc[row_indexer,col_indexer] = value instead
-
-See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-  defect_img_df['full_image_path'] = defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
-Number of images in leddd/train/good: 773
-Number of images in leddd/test/good: 194
-Number of images in leddd/test/defect_type_2: 112
-Number of images in leddd/test/defect_type_4: 134
-Number of images in leddd/test/defect_type_3: 87
-Number of images in leddd/test/defect_type_7: 10
-Number of images in leddd/test/defect_type_6: 6
-
-(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD/dataset$ cd ..
-
-(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --train_steps 1000
-Computing mean of features: 100%|████████████████████████████████████████████████████████████| 695/695 [00:01<00:00, 420.63it/s]
-Computing std of features: 100%|█████████████████████████████████████████████████████████████| 695/695 [00:01<00:00, 618.44it/s]
-Current loss: 5.1687  : 100%|███████████████████████████████████████████████████████████████| 1000/1000 [00:16<00:00, 60.22it/s]
-Final map normalization: 100%|█████████████████████████████████████████████████████████████████| 78/78 [00:00<00:00, 117.57it/s]
-Final inference: 100%|███████████████████████████████████████████████████████████████████████| 543/543 [00:03<00:00, 139.98it/s]
-Final image auc: 95.1452
+Class      Accuracy    Precision    Recall    Num Samples
+-------  ----------  -----------  --------  -------------
+Overall      0.9234       0.9158    0.9656            561
+Final image auc: 97.6807
 ```
+
+```bash
+(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000 --threshold 15 --batch_size 4
+Computing mean of features: 100%|██████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 104.68it/s]
+Computing std of features: 100%|███████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 166.85it/s]
+Current loss: 5.0027  : 100%|█████████████████████████████████████████████████████████████████████| 1000/1000 [00:52<00:00, 19.02it/s]
+Final map normalization: 100%|████████████████████████████████████████████████████████████████████████| 22/22 [00:00<00:00, 73.24it/s]
+Final inference: 100%|█████████████████████████████████████████████████████████████████████████████| 561/561 [00:05<00:00, 104.84it/s]
+
+Class            Accuracy    Precision    Recall    Num Samples
+-------------  ----------  -----------  --------  -------------
+defect_type_2      0.9911       1.0000    0.9911            112
+defect_type_3      1.0000       1.0000    1.0000             87
+defect_type_4      1.0000       1.0000    1.0000            134
+defect_type_6      1.0000       1.0000    1.0000              6
+defect_type_7      1.0000       1.0000    1.0000             10
+good               0.8160       0.0000  nan                 212
+
+Class      Accuracy    Precision    Recall    Num Samples
+-------  ----------  -----------  --------  -------------
+Overall      0.9287       0.8992    0.9971            561
+Final image auc: 97.5739
+```
+
+## Case Study
+
+### Good Samples (Normal)
+
+<table>
+    <tr>
+        <td><img src="assets/good_1.jpg" alt="good_1" /><br /><center>Good 1</center></td>
+        <td><img src="assets/good_2.jpg" alt="good_2" /><br /><center>Good 2</center></td>
+        <td><img src="assets/good_3.jpg" alt="good_3" /><br /><center>Good 3</center></td>
+    </tr>
+</table>
+
+### Defect Samples (Anomalies)
+
+<table>
+    <tr>
+        <td><img src="assets/Particle_Big_1.jpg" alt="Particle_Big_1" /><br /><center>Particle Big 1</center></td>
+        <td><img src="assets/Particle_Big_2.jpg" alt="Particle_Big_2" /><br /><center>Particle Big 2</center></td>
+    </tr>
+</table>
+<table>
+    <tr>
+        <td><img src="assets/particle_1.jpg" alt="particle_1" /><br /><center>Particle 1</center></td>
+        <td><img src="assets/particle_2.jpg" alt="particle_2" /><br /><center>Particle 2</center></td>
+    </tr>
+</table>
+<table>
+    <tr>
+        <td><img src="assets/led_ng_1.jpg" alt="led_ng_1" /><br /><center>LED NG 1</center></td>
+        <td><img src="assets/led_ng_2.jpg" alt="led_ng_2" /><br /><center>LED NG 2</center></td>
+    </tr>
+</table>
+<table>
+    <td><img src="assets/flip_1.jpg" alt="flip_1" /><br /><center>Flip 1</center></td>
+    <td><img src="assets/flip_2.jpg" alt="flip_2" /><br /><center>Flip 2</center></td>
+    <td><img src="assets/flip_3.jpg" alt="flip_3" /><br /><center>Flip 3</center></td>
+    </tr>
+</table>
+<table>
+    <td><img src="assets/tilt_1.jpg" alt="tilt_1" /><br /><center>Tilt 1</center></td>
+    <td><img src="assets/tilt_2.jpg" alt="tilt_2" /><br /><center>Tilt 2</center></td>
+    <td><img src="assets/oh_no.jpg" alt="oh_no" /><br /><center>...</center></td>
+    </tr>
+</table>
 
 ## TODO
 
