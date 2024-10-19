@@ -15,36 +15,44 @@ from common import get_autoencoder, get_pdn_small, get_pdn_medium, \
     ImageFolderWithoutTarget, ImageFolderWithPath, InfiniteDataloader
 from sklearn.metrics import roc_auc_score
 from PIL import Image
+from tabulate import tabulate
 
 def get_argparse():
+    config = None
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', default='mvtec_ad',
                         choices=['mvtec_ad', 'mvtec_loco', 'custom'])
     parser.add_argument('-s', '--subdataset', default='bottle',
                         help='One of 15 sub-datasets of Mvtec AD or 5 '
-                             'sub-datasets of Mvtec LOCO. Ignored if dataset is custom.')
-    parser.add_argument('-o', '--output_dir', default='output/1')
+                            'sub-datasets of Mvtec LOCO. Ignored if dataset is custom.')
+    parser.add_argument('--mvtec_ad_path',
+                        default='./dataset/original/mvtec_anomaly_detection',
+                        help='Downloaded Mvtec AD dataset')
+    parser.add_argument('--mvtec_loco_path',
+                        default='./mvtec_loco_anomaly_detection',
+                        help='Downloaded Mvtec LOCO dataset')
+    parser.add_argument('-c', '--custom_dataset_path',
+                        default='./custom_dataset',
+                        help='Path to your custom dataset')
+    parser.add_argument('-t', '--train_steps', type=int, default=70000)
+    parser.add_argument('-b', '--batch_size', type=int, default=1)
     parser.add_argument('-m', '--model_size', default='small',
                         choices=['small', 'medium'])
     parser.add_argument('-w', '--weights', default='models/teacher_small.pth')
     parser.add_argument('-i', '--imagenet_train_path',
                         default='none',
                         help='Set to "none" to disable ImageNet '
-                             'pretraining penalty. Or see README.md to '
-                             'download ImageNet and set to ImageNet path')
-    parser.add_argument('-a', '--mvtec_ad_path',
-                        default='./dataset/original/mvtec_anomaly_detection',
-                        help='Downloaded Mvtec AD dataset')
-    parser.add_argument('-b', '--mvtec_loco_path',
-                        default='./mvtec_loco_anomaly_detection',
-                        help='Downloaded Mvtec LOCO dataset')
-    parser.add_argument('-c', '--custom_dataset_path',
-                        default='./custom_dataset',
-                        help='Path to your custom dataset')
+                            'pretraining penalty. Or see README.md to '
+                            'download ImageNet and set to ImageNet path')
+    parser.add_argument('-o', '--output_dir', default='output/1')
+    parser.add_argument('-T', '--threshold', type=int, default=80, help='Threshold for anomaly detection. From 0 to 255. Default is 80.')
     parser.add_argument('-f', '--map_format', default='tiff', choices=['tiff', 'jpg'],
                         help='Format to save anomaly maps as')
-    parser.add_argument('-t', '--train_steps', type=int, default=70000)
-    return parser.parse_args()
+
+    config = parser.parse_args()
+        
+    return config
 
 # constants
 seed = 42
@@ -154,10 +162,10 @@ def main():
     else:
         raise Exception('Unknown config.dataset')
 
-    train_loader = DataLoader(train_set, batch_size=1, shuffle=True,
-                              num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=config.batch_size, shuffle=True,
+                              num_workers=config.batch_size, pin_memory=True)
     train_loader_infinite = InfiniteDataloader(train_loader)
-    validation_loader = DataLoader(validation_set, batch_size=1)
+    validation_loader = DataLoader(validation_set, batch_size=config.batch_size)
 
     if pretrain_penalty:
         # load pretraining data for penalty
@@ -171,7 +179,7 @@ def main():
         ])
         penalty_set = ImageFolderWithoutTarget(config.imagenet_train_path,
                                                transform=penalty_transform)
-        penalty_loader = DataLoader(penalty_set, batch_size=1, shuffle=True,
+        penalty_loader = DataLoader(penalty_set, batch_size=4, shuffle=True,
                                     num_workers=4, pin_memory=True)
         penalty_loader_infinite = InfiniteDataloader(penalty_loader)
     else:
@@ -301,16 +309,19 @@ def main():
         teacher_std=teacher_std, q_st_start=q_st_start, q_st_end=q_st_end,
         q_ae_start=q_ae_start, q_ae_end=q_ae_end,
         test_output_dir=test_output_dir, desc='Final inference',
-        map_format=config.map_format)
+        map_format=config.map_format,
+        threshold=config.threshold)
     print('Final image auc: {:.4f}'.format(auc))
 
 @torch.no_grad()
 def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
          q_st_start, q_st_end, q_ae_start, q_ae_end, test_output_dir=None,
          desc='Running inference',
-         map_format='tiff'):
+         map_format='tiff',
+         threshold=80):
     y_true = []
     y_score = []
+    y_class = []
     for image, target, path in tqdm(test_set, desc=desc):
         orig_width = image.width
         orig_height = image.height
@@ -363,9 +374,43 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
             raise ValueError("Invalid map format specified. Use 'tiff' or 'jpg'.")
 
         y_true_image = 0 if defect_class == 'good' else 1
-        y_score_image = np.max(map_combined)
+        y_score_image = np.max(map_combined) # range [0, 255]
         y_true.append(y_true_image)
         y_score.append(y_score_image)
+        y_class.append(defect_class)
+
+    # Calculate metrics for each defect class
+    defect_classes = set(y_class)
+    class_metrics = []
+    for defect_class in defect_classes:
+        class_indices = [i for i, cls in enumerate(y_class) if cls == defect_class]
+        y_true_class = [y_true[i] for i in class_indices]
+        y_score_class = [y_score[i] for i in class_indices]
+        
+        accuracy_class = np.mean(np.array(y_true_class) == (np.array(y_score_class) > threshold))
+        precision_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_score_class) > threshold)
+        recall_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_true_class) == 1)
+        num_samples_class = len(y_true_class)
+        
+        class_metrics.append([defect_class, accuracy_class, precision_class, recall_class, num_samples_class])
+    
+    # Print class metrics as a table
+    headers = ["Class", "Accuracy", "Precision", "Recall", "Num Samples"]
+    class_metrics.sort(key=lambda x: x[0])  # Sort by Class
+    print()
+    print(tabulate(class_metrics, headers=headers, floatfmt=".4f"))
+
+    # Calculate overall metrics
+    accuracy = np.mean(np.array(y_true) == (np.array(y_score) > threshold))
+    precision = np.sum((np.array(y_true) == 1) & (np.array(y_score) > threshold)) / np.sum(np.array(y_score) > threshold)
+    recall = np.sum((np.array(y_true) == 1) & (np.array(y_score) > threshold)) / np.sum(np.array(y_true) == 1)
+    num_samples = len(y_true)
+    
+    # Print overall metrics as a table
+    overall_metrics = [["Overall", accuracy, precision, recall, num_samples]]
+    print()
+    print(tabulate(overall_metrics, headers=headers, floatfmt=".4f"))
+
     auc = roc_auc_score(y_true=y_true, y_score=y_score)
     return auc * 100
 
