@@ -1,0 +1,6 @@
+python inference.py --image_dir dataset/leddd/test/defect_type_2 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_2 --model_size small --map_format jpg
+python inference.py --image_dir dataset/leddd/test/defect_type_3 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_3 --model_size small --map_format jpg
+python inference.py --image_dir dataset/leddd/test/defect_type_4 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_4 --model_size small --map_format jpg
+python inference.py --image_dir dataset/leddd/test/defect_type_5 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_5 --model_size small --map_format jpg
+python inference.py --image_dir dataset/leddd/test/defect_type_6 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_6 --model_size small --map_format jpg
+python inference.py --image_dir dataset/leddd/test/defect_type_7 --model_checkpoint output/1/trainings/custom --output_dir output/1/preview/defect_7 --model_size small --map_format jpg

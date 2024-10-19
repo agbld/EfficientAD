@@ -14,6 +14,7 @@ from tqdm import tqdm
 from common import get_autoencoder, get_pdn_small, get_pdn_medium, \
     ImageFolderWithoutTarget, ImageFolderWithPath, InfiniteDataloader
 from sklearn.metrics import roc_auc_score
+from PIL import Image
 
 def get_argparse():
     parser = argparse.ArgumentParser()
@@ -40,6 +41,8 @@ def get_argparse():
     parser.add_argument('-c', '--custom_dataset_path',
                         default='./custom_dataset',
                         help='Path to your custom dataset')
+    parser.add_argument('-f', '--map_format', default='tiff', choices=['tiff', 'jpg'],
+                        help='Format to save anomaly maps as')
     parser.add_argument('-t', '--train_steps', type=int, default=70000)
     return parser.parse_args()
 
@@ -297,13 +300,15 @@ def main():
         autoencoder=autoencoder, teacher_mean=teacher_mean,
         teacher_std=teacher_std, q_st_start=q_st_start, q_st_end=q_st_end,
         q_ae_start=q_ae_start, q_ae_end=q_ae_end,
-        test_output_dir=test_output_dir, desc='Final inference')
+        test_output_dir=test_output_dir, desc='Final inference',
+        map_format=config.map_format)
     print('Final image auc: {:.4f}'.format(auc))
 
 @torch.no_grad()
 def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
          q_st_start, q_st_end, q_ae_start, q_ae_end, test_output_dir=None,
-         desc='Running inference'):
+         desc='Running inference',
+         map_format='tiff'):
     y_true = []
     y_score = []
     for image, target, path in tqdm(test_set, desc=desc):
@@ -323,13 +328,39 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
             map_combined, (orig_height, orig_width), mode='bilinear')
         map_combined = map_combined[0, 0].cpu().numpy()
 
+        # Convert anomaly map to numpy and scale to [0, 255]
+        map_combined = map_combined * 255
+        map_combined = map_combined.astype(np.int16)  # Convert to uint8 for JPG format
+
         defect_class = os.path.basename(os.path.dirname(path))
-        if test_output_dir is not None:
-            img_nm = os.path.split(path)[1].split('.')[0]
-            if not os.path.exists(os.path.join(test_output_dir, defect_class)):
-                os.makedirs(os.path.join(test_output_dir, defect_class))
-            file = os.path.join(test_output_dir, defect_class, img_nm + '.tiff')
-            tifffile.imwrite(file, map_combined)
+        img_nm = os.path.split(path)[1].split('.')[0]
+        if not os.path.exists(os.path.join(test_output_dir, defect_class)):
+            os.makedirs(os.path.join(test_output_dir, defect_class))
+
+        if map_format == 'tiff':
+            # Save the anomaly map as a TIFF file
+            anomaly_map_path = os.path.join(test_output_dir, defect_class, img_nm + '.tiff')
+            tifffile.imwrite(anomaly_map_path, map_combined) # Save as TIFF
+        elif map_format == 'jpg':
+            # Convert input image to a PIL Image
+            original_image = Image.open(path).convert('RGB')
+            
+            # Convert anomaly map to PIL image
+            anomaly_map_image = Image.fromarray(map_combined)
+            anomaly_map_image = anomaly_map_image.resize((original_image.width, original_image.height))  # Resize to match original image size
+            
+            # Combine the original image and the anomaly map side by side
+            combined_image_width = original_image.width + anomaly_map_image.width
+            combined_image_height = original_image.height
+            combined_image = Image.new('RGB', (combined_image_width, combined_image_height))
+            combined_image.paste(original_image, (0, 0))
+            combined_image.paste(anomaly_map_image.convert('RGB'), (original_image.width, 0))
+
+            # Save the combined image as JPG
+            combined_image_path = os.path.join(test_output_dir, defect_class, img_nm + '.jpg')
+            combined_image.save(combined_image_path)  # Save as JPG
+        else:
+            raise ValueError("Invalid map format specified. Use 'tiff' or 'jpg'.")
 
         y_true_image = 0 if defect_class == 'good' else 1
         y_score_image = np.max(map_combined)
