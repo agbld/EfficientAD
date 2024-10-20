@@ -27,8 +27,6 @@ python eval.py --dataset custom --custom_dataset_path dataset/leddd --output_dir
 
 (PLEASE SEE [It Even Finds Many Mislabeled Samples](#it-even-finds-many-mislabeled-samples) FOR THE LOW ACCURACY OF `good` CLASS)
 
-```bash
-
 Following shows the metrics under different `threshold` values:
 
 ```bash
