@@ -14,6 +14,7 @@ from PIL import Image
 from tabulate import tabulate
 import tifffile
 import matplotlib
+import csv
 
 def get_eval_argparse():
     parser = argparse.ArgumentParser()
@@ -51,6 +52,10 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
     y_true = []
     y_score = []
     y_class = []
+    
+    # List to store mismatch samples
+    mismatches = []
+
     for image, target, path in tqdm(test_set, desc=desc):
         orig_width = image.width
         orig_height = image.height
@@ -106,6 +111,10 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
         y_score.append(y_score_image)
         y_class.append(defect_class)
 
+        # Collect mismatch samples (where prediction does not match ground truth)
+        if (y_true_image == 0 and y_score_image > threshold) or (y_true_image == 1 and y_score_image <= threshold):
+            mismatches.append([defect_class, img_nm, y_score_image])
+
     # Calculate metrics for each defect class
     defect_classes = set(y_class)
     class_metrics = []
@@ -116,14 +125,10 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
         
         accuracy_class = np.mean(np.array(y_true_class) == (np.array(y_score_class) > threshold))
 
-        # precision_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_score_class) > threshold)
-        # recall_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_true_class) == 1)
         if defect_class == 'good':
-            # For the 'good' class, target is 0, so adjust precision and recall for 'good' class
             precision_class = np.sum((np.array(y_true_class) == 0) & (np.array(y_score_class) <= threshold)) / np.sum(np.array(y_score_class) <= threshold)
             recall_class = np.sum((np.array(y_true_class) == 0) & (np.array(y_score_class) <= threshold)) / np.sum(np.array(y_true_class) == 0)
         else:
-            # For other defect classes, target is 1
             precision_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_score_class) > threshold)
             recall_class = np.sum((np.array(y_true_class) == 1) & (np.array(y_score_class) > threshold)) / np.sum(np.array(y_true_class) == 1)
 
@@ -149,6 +154,14 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
     print(tabulate(overall_metrics, headers=headers, floatfmt=".4f"))
 
     auc = roc_auc_score(y_true=y_true, y_score=y_score)
+    
+    # Export mismatches to a CSV file
+    mismatch_csv_path = os.path.join(test_output_dir, 'mismatch_samples.csv')
+    with open(mismatch_csv_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['defect_class', 'image_name', 'y_score'])  # Write headers
+        writer.writerows(mismatches)  # Write mismatch samples
+
     return auc * 100
 
 def main():

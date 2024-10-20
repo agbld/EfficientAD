@@ -1,7 +1,8 @@
-mvtec_anomaly_detection
+assets
 output
 dataset/original
 dataset/leddd
+dataset/visualized
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
