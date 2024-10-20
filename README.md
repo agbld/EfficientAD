@@ -8,7 +8,12 @@ python prepare_dataset.py --annotations original/annotations/instance.json --lab
 
 Train EfficientAD on custom dataset:
 ```bash
-python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --epochs 3 --threshold 20 --batch_size 10
+python train.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --epochs 3 --batch_size 10
+```
+
+Evaluate EfficientAD on custom dataset:
+```bash
+python eval.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --threshold 20 --weights_dir output/1/trainings/custom
 ```
 
 ### Expected Output
