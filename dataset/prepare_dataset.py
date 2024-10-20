@@ -7,6 +7,7 @@ import pandas as pd
 from collections import defaultdict
 from pathlib import Path
 import argparse
+import csv
 
 #%%
 # Create a parser
@@ -19,7 +20,11 @@ parser.add_argument('--output_dir', type=str, default='leddd', help='Path to the
 parser.add_argument('--train_ratio', type=float, default=0.8, help='Ratio of training images to total images.')
 args = parser.parse_args()
 
-print(args)
+# Print the parsed arguments in a formatted manner
+print("\nParsed arguments:")
+for arg, value in vars(args).items():
+    print(f"--{arg} = {value}")
+print()
 
 ANNOTATIONS = args.annotations
 LABELED_DIR = args.labeled_dir
@@ -88,7 +93,8 @@ normal_img_df['defects'] = [[] for _ in range(len(normal_img_df))]
 
 # Prepare 'full_image_path' in normal_defect_img_df
 defect_img_dir = Path(LABELED_DIR)
-normal_defect_img_df['full_image_path'] = normal_defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
+normal_defect_img_df = normal_defect_img_df.copy()
+normal_defect_img_df.loc[:, 'full_image_path'] = normal_defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
 
 # Combine normal images from normal_img_df and normal_defect_img_df
 combined_normal_img_df = pd.concat([normal_img_df, normal_defect_img_df[['full_image_path', 'defects']]], ignore_index=True)
@@ -147,7 +153,8 @@ for i, row in normal_img_test_df.iterrows():
     shutil.copy(image_path, new_image_path)
 
 # Prepare 'full_image_path' in defect_img_df
-defect_img_df['full_image_path'] = defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
+defect_img_df = defect_img_df.copy()
+defect_img_df.loc[:, 'full_image_path'] = defect_img_df['image_path'].apply(lambda x: defect_img_dir / x)
 
 # Copy the defect images to the test directories. Copy, not move.
 for i, row in defect_img_df.iterrows():
@@ -163,10 +170,25 @@ for i, row in defect_img_df.iterrows():
                 print(f'cp {image_path} {new_image_path}')
 
 #%%
-# Print the number of images in each directory
+# Print the number of images in each directory.
 print(f'Number of images in {good_train_dir}: {len(list(good_train_dir.glob("*.jpg")))}')
 print(f'Number of images in {good_test_dir}: {len(list(good_test_dir.glob("*.jpg")))}')
 for defect, defect_test_dir in defect_test_dirs.items():
     print(f'Number of images in {defect_test_dir}: {len(list(defect_test_dir.glob("*.jpg")))}')
+
+# Export the counts to a CSV file.
+counts = [
+    {'directory': str(good_train_dir), 'count': len(list(good_train_dir.glob("*.jpg")))},
+    {'directory': str(good_test_dir), 'count': len(list(good_test_dir.glob("*.jpg")))}
+]
+
+for defect, defect_test_dir in defect_test_dirs.items():
+    counts.append({'directory': str(defect_test_dir), 'count': len(list(defect_test_dir.glob("*.jpg")))})
+
+csv_output_path = custom_dataset_dir / 'image_counts.csv'
+with open(csv_output_path, mode='w', newline='') as file:
+    writer = csv.DictWriter(file, fieldnames=['directory', 'count'])
+    writer.writeheader()
+    writer.writerows(counts)
 
 #%%
