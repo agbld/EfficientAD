@@ -16,6 +16,8 @@ from common import get_autoencoder, get_pdn_small, get_pdn_medium, \
 from sklearn.metrics import roc_auc_score
 from PIL import Image
 from tabulate import tabulate
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 def get_argparse():
     config = None
@@ -355,9 +357,17 @@ def test(test_set, teacher, student, autoencoder, teacher_mean, teacher_std,
         elif map_format == 'jpg':
             # Convert input image to a PIL Image
             original_image = Image.open(path).convert('RGB')
+
+            # Normalize the anomaly map to [0, 1]
+            gradient_softness = threshold / 3
+            map_combined_normalized = (map_combined - threshold) / gradient_softness
+            map_combined_normalized = 1 / (1 + np.exp(-map_combined_normalized))
             
-            # Convert anomaly map to PIL image
-            anomaly_map_image = Image.fromarray(map_combined)
+            # Convert the normalized anomaly map to a heatmap
+            colormap = cm.get_cmap('jet')
+            anomaly_map_image = colormap(map_combined_normalized)
+            anomaly_map_image = (anomaly_map_image[:, :, :3] * 255).astype(np.uint8)  # Convert to RGB format
+            anomaly_map_image = Image.fromarray(anomaly_map_image)
             anomaly_map_image = anomaly_map_image.resize((original_image.width, original_image.height))  # Resize to match original image size
             
             # Combine the original image and the anomaly map side by side
