@@ -27,8 +27,6 @@ python eval.py --dataset custom --custom_dataset_path dataset/leddd --output_dir
 
 ### Expected Output
 
-(PLEASE SEE [It Even Finds Many Mislabeled Samples](#it-even-finds-many-mislabeled-samples) FOR THE LOW ACCURACY OF `good` CLASS)
-
 * Training completed in **52 seconds**
 * Inference completed in 5 seconds (< 10ms per image)
 * (See [It Even Finds Many Mislabeled Samples](#it-even-finds-many-mislabeled-samples) for poor performance for `good` class)
