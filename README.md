@@ -5,6 +5,8 @@ Unofficial implementation of paper https://arxiv.org/abs/2303.14535
 
 Huge thanks to the authors of both the paper and the unofficial implementation. This is a forked version with some modification for custom datasetsee. See here for the original unofficial implementation: https://github.com/nelson1425/EfficientAD.git
 
+Please note that EfficientAD is a fully UNSUPERVISED learning approach that requires NO ANNOTATIONS. In the current setting, the model is trained using only HALF of the normal samples (and ZERO abnormal samples) and can be trained in UNDER 2 MINUTES on an RTX 4090.
+
 ## Quick Start:
 
 Prepare dataset:
@@ -27,31 +29,9 @@ python eval.py --dataset custom --custom_dataset_path dataset/leddd --output_dir
 
 (PLEASE SEE [It Even Finds Many Mislabeled Samples](#it-even-finds-many-mislabeled-samples) FOR THE LOW ACCURACY OF `good` CLASS)
 
-Following shows the metrics under different `threshold` values:
-
-```bash
-(effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000 --threshold 20 --batch_size 4
-Computing mean of features: 100%|██████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 105.77it/s]
-Computing std of features: 100%|███████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 167.34it/s]
-Current loss: 4.9925  : 100%|█████████████████████████████████████████████████████████████████████| 1000/1000 [00:52<00:00, 18.92it/s]
-Final map normalization: 100%|████████████████████████████████████████████████████████████████████████| 22/22 [00:00<00:00, 48.38it/s]
-Final inference: 100%|█████████████████████████████████████████████████████████████████████████████| 561/561 [00:05<00:00, 107.96it/s]
-
-Class            Accuracy    Precision    Recall    Num Samples
--------------  ----------  -----------  --------  -------------
-defect_type_2      0.9107       1.0000    0.9107            112
-defect_type_3      0.9770       1.0000    0.9770             87
-defect_type_4      1.0000       1.0000    1.0000            134
-defect_type_6      1.0000       1.0000    1.0000              6
-defect_type_7      1.0000       1.0000    1.0000             10
-good               0.8538       0.0000  nan                 212
-
-Class      Accuracy    Precision    Recall    Num Samples
--------  ----------  -----------  --------  -------------
-Overall      0.9234       0.9158    0.9656            561
-Final image auc: 97.6807
-```
-
+* Training completed in **52 seconds**
+* Inference completed in 5 seconds (< 10ms per image)
+* (See [It Even Finds Many Mislabeled Samples](#it-even-finds-many-mislabeled-samples) for poor performance for `good` class)
 ```bash
 (effad) ee303@ee303-Z790-AORUS-ELITE:~/Documents/agbld/GitHub/EfficientAD$ python efficientad.py --dataset custom --custom_dataset_path dataset/leddd --output_dir output/1 --model_size small --map_format jpg --train_steps 1000 --threshold 15 --batch_size 4
 Computing mean of features: 100%|██████████████████████████████████████████████████████████████████| 190/190 [00:01<00:00, 104.68it/s]
@@ -75,9 +55,30 @@ Overall      0.9287       0.8992    0.9971            561
 Final image auc: 97.5739
 ```
 
-## Case Study
+#### YOLOv11x Under Similar Settings
 
-Please note that this is a fully UNSUPERVISED learning approach, requiring NO ANNOTATIONS. In the current setting, the model is trained with only HALF of the normal samples and can be trained in UNDER 2 MINUTES on an RTX 4090.
+* Training completed in **741 seconds**
+* Inference completed in **2 seconds** (< 10ms per image)
+```bash
+Processing images: 100%|████████████████████████████████████████████████████████████████████████| 229/229 [00:02<00:00, 112.13it/s]
+
+Overall Metrics:
+Accuracy: 0.8734
+Precision: 0.7527
+Recall: 0.9211
+AUC: 0.9383
+
+Class            Accuracy    Precision    Recall    Num Samples
+-------------  ----------  -----------  --------  -------------
+defect_type_2      0.9200       1.0000    0.9200             25
+defect_type_3      1.0000       1.0000    1.0000             19
+defect_type_4      0.8621       1.0000    0.8621             29
+defect_type_6      1.0000       1.0000    1.0000              1
+defect_type_7      1.0000       1.0000    1.0000              2
+good               0.8497       0.0000    0.0000            153
+```
+
+## Case Study
 
 ### Good Samples (Normal)
 
