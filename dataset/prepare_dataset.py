@@ -144,13 +144,19 @@ for i, row in normal_img_train_df.iterrows():
     image_path = row['full_image_path']
     image_name = os.path.basename(image_path)
     new_image_path = good_train_dir / image_name
-    shutil.copy(image_path, new_image_path)
+    try:
+        shutil.copy(image_path, new_image_path)
+    except FileNotFoundError:
+        print(f'cp {image_path} {new_image_path}')
 
 for i, row in normal_img_test_df.iterrows():
     image_path = row['full_image_path']
     image_name = os.path.basename(image_path)
     new_image_path = good_test_dir / image_name
-    shutil.copy(image_path, new_image_path)
+    try:
+        shutil.copy(image_path, new_image_path)
+    except FileNotFoundError:
+        print(f'cp {image_path} {new_image_path}')
 
 # Prepare 'full_image_path' in defect_img_df
 defect_img_df = defect_img_df.copy()
