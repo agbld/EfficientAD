@@ -139,7 +139,7 @@ There're MUCH MORE mislabeled samples in the dataset. I just show a few of them 
 
 ## TODO
 
-- [ ] Read the paper
-- [ ] Understand the metrics
+- [x] Read the paper
+- [x] Understand the metrics
 - [ ] Familiarize with the code
 - [ ] Integrate this repo with [agbld/led-defects-detection](https://github.com/agbld/led-defects-detection.git)
